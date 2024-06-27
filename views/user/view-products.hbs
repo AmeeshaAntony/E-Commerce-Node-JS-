@@ -10,7 +10,7 @@
                         <div class="card-body">
                             <h5 class="card-title">{{this.name}}</h5>
                             <p class="card-text">{{this.description}}.</p>
-                            <a href="/add-to-cart/{{this._id}}" class="btn btn-primary">Add to Cart</a>
+                            <button onclick="addtocart('{{this._id}}')" class="btn btn-primary">Add to Cart</button>
                         </div>
                     </div>                   
                 </div>
@@ -19,3 +19,24 @@
         </div>
     </div>
     </section>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+function addtocart(prodId) {
+    $.ajax({
+        url: '/add-to-cart/' + prodId,
+        method: 'GET',
+        success: function(response) {
+            if(response.status){
+                let c=$('#cart-count').html()
+                c=parseInt(c)+1
+                $('#cart-count').html(c)
+            }
+            alert(response.message);
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX error:', status, error);
+            alert('Error adding to cart: ' + error);
+        }
+    });
+}
+</script>

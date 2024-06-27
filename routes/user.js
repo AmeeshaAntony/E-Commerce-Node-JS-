@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const userHelpers = require('../helpers/user-helpers');
-const productHelpers = require('../helpers/product-helpers')
+const productHelpers = require('../helpers/product-helpers');
+const { USER_COLLECTION } = require('../config/collections');
 const verifylogin=(req,res,next)=>{
     if(req.session.loggedIn){
         next()
@@ -10,10 +11,15 @@ const verifylogin=(req,res,next)=>{
         res.redirect('/login')
     }
 }
-router.get('/', (req, res) => {
+router.get('/', async (req, res,next) => {
     let user=req.session.user
+    let cartcount=null
+    if(req.session.user){
+        cartcount=await userHelpers.getcartcount(req.session.user._id)
+    }
+    
     productHelpers.getAllProducts().then((products) => {
-      res.render('user/view-products', {products,user});
+      res.render('user/view-products', {products,user,cartcount});
     }).catch((err) => {
       console.error(err);
       res.status(500).send('Internal Server Error');
@@ -89,11 +95,17 @@ router.get('/logout',(req,res)=>{
 router.get('/cart',verifylogin,async(req,res)=>{
     let products=await userHelpers.getcartproducts(req.session.user._id)
     console.log(products)
-    res.render('user/cart')
+    res.render('user/cart',{products,user:req.session.user})//user inorder to display username in that page
 })
-router.get('/add-to-cart/:id',verifylogin,(req,res)=>{
-    userHelpers.addtocart(req.params.id,req.session.user._id).then(()=>{
-        res.redirect('/')
-    })
-})
+router.get('/add-to-cart/:id', async (req, res) => {
+    try {
+        console.log("API call received");
+        await userHelpers.addtocart(req.params.id, req.session.user._id);
+        console.log('Item successfully added to cart');
+        res.json({ status: true, message: 'Item added to cart' });
+    } catch (error) {
+        console.error('Error adding item to cart:', error);
+        res.status(500).json({ status: false, message: 'Failed to add item to cart' });
+    }
+});
 module.exports = router;

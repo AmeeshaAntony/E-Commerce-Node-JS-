@@ -1,1 +1,26 @@
-<h1>Cart Page</h1>
+<section>
+    <div class="container">
+        <table class="table mt-5">
+            <thead>
+                <tr>
+                    <th scope="col">Item</th>
+                    <th scope="col">Cart</th>
+                    <th scope="col">Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each products}}
+                    <tr>
+                    <td><img style="width:50px;height:40px;" src="/product-images/{{productDetails._id}}.jpg" alt=""></td>
+                    <td>{{productDetails.name}}</td>
+                    <td>{{quantity}}</td>
+                    <td>
+                    <a href="" class="btn btn-danger">Remove</a>
+                    </td>
+                    </tr>
+                    {{/each}}
+
+            </tbody>
+        </table>
+    </div>
+</section>
