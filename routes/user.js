@@ -108,4 +108,18 @@ router.get('/add-to-cart/:id', async (req, res) => {
         res.status(500).json({ status: false, message: 'Failed to add item to cart' });
     }
 });
+router.post('/change-product-quantity', async (req, res) => {
+    try {
+        const { userId, prodId, count } = req.body;
+        await userHelpers.changeproQuant({ userId, prodId, count });
+        res.json({ status: true, message: 'Product quantity updated successfully' });
+    } catch (error) {
+        console.error('Error changing product quantity:', error);
+        res.status(500).json({ status: false, message: 'Error changing product quantity' });
+    }
+});
+router.get('/place-order',verifylogin,async(req,res)=>{
+    let total=await userHelpers.getTotal(req.session.user._id)
+    res.render('user/place-order',{total})//avdenn varunna value aahn total
+})
 module.exports = router;

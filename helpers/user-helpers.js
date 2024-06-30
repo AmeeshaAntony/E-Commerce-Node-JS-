@@ -72,7 +72,7 @@ module.exports = {
                     
                     if (productIndex !== -1) {
                         await db.get().collection(collection.CART_COLLECTION).updateOne(
-                            { 'user': new ObjectId(userId), 'products.item': new ObjectId(prodId) },
+                            {'user': new ObjectId(userId), 'products.item': new ObjectId(prodId) },//to check whether user matshes their cart itself
                             { $inc: { 'products.$.quantity': 1 } }
                         );
                         console.log('Product quantity incremented');
@@ -122,12 +122,13 @@ module.exports = {
                     },
                     {
                         $project: { // Shape the output document
-                            _id: 0, // Exclude the _id field
+                            _id: 1, // Include the _id field
+                            userId: '$user',
                             item: '$products.item', // Include the item id
                             quantity: '$products.quantity', // Include the quantity
                             productDetails: '$productDetails' // Include the product details
                         }
-                    }
+                    },
                 ];
     
                 let cartItems = await db.get().collection(collection.CART_COLLECTION).aggregate(pipeline).toArray();
@@ -161,5 +162,105 @@ module.exports = {
             resolve(c);
         }
         )
+    },
+    changeproQuant: ({ userId, prodId, count }) => {
+        count = parseInt(count);
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Fetch the cart to check if the product exists
+                let userCart = await db.get().collection(collection.CART_COLLECTION).findOne({ user: new ObjectId(userId) });
+                //console.log('User Cart:', JSON.stringify(userCart, null, 2));
+    
+                if (userCart && userCart.products) {
+                    const productIndex = userCart.products.findIndex(product => product.item && product.item.toString() === prodId);
+                    console.log('Product index:', productIndex);
+    
+                    if (productIndex !== -1) {
+                        const currentQuantity = userCart.products[productIndex].quantity;
+                        if (currentQuantity === 1 && count === -1) {
+                            // Remove the product if current quantity is 1 and count is -1
+                            await db.get().collection(collection.CART_COLLECTION).updateOne(
+                                { user: new ObjectId(userId) },
+                                { $pull: { products: { item: new ObjectId(prodId) } } }
+                            );
+                            console.log('Product removed from cart');
+                            resolve({removeProduct:true})
+                        } else {
+                            // Otherwise, update the product quantity
+                            await db.get().collection(collection.CART_COLLECTION).updateOne(
+                                { 'user': new ObjectId(userId), 'products.item': new ObjectId(prodId) },
+                                { $inc: { 'products.$.quantity': count } }
+                            );
+                            console.log('Product quantity updated');
+                        }
+                    } else {
+                        await db.get().collection(collection.CART_COLLECTION).updateOne(
+                            { user: new ObjectId(userId) },
+                            { $push: { products: { item: new ObjectId(prodId), quantity: count } } }
+                        );
+                        console.log('Product added to cart');
+                    }
+                } else {
+                    // If no cart exists for the user, create a new cart with the product
+                    let cartObj = {
+                        user: new ObjectId(userId),
+                        products: [{ item: new ObjectId(prodId), quantity: count }]
+                    };
+                    await db.get().collection(collection.CART_COLLECTION).insertOne(cartObj);
+                    console.log('New cart created and product added');
+                }
+                resolve();
+            } catch (error) {
+                console.error('Error changing product quantity:', error);
+                reject(error);
+            }
+        });
+    },
+    getTotal: (userId) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                console.log('getTotal function called with userId:', userId);
+                const pipeline = [
+                    {
+                        $match: { user: new ObjectId(userId) } // Match the user's cart
+                    },
+                    {
+                        $unwind: '$products' // Deconstruct the products array
+                    },
+                    {
+                        $lookup: {
+                            from: collection.PRODUCT_COLLECTION, // Reference to the product collection
+                            localField: 'products.item', // Field from cart to match
+                            foreignField: '_id', // Field from product collection to match
+                            as: 'productDetails' // Alias for the matched product details
+                        }
+                    },
+                    {
+                        $unwind: '$productDetails' // Deconstruct the resulting product details array
+                    },
+                    {
+                        $addFields: {
+                            quantity: { $toInt: '$products.quantity' } // Convert quantity to integer if necessary
+                        }
+                    },
+                    {
+                        $group: { // Group by user and calculate total
+                            _id: null,
+                            total: { $sum: { $multiply: ['$quantity', {$toInt:'$productDetails.price'}] } }
+                        }
+                    }
+                ];
+    
+                let cartItems = await db.get().collection(collection.CART_COLLECTION).aggregate(pipeline).toArray();
+                
+                console.log('Cart Items:', JSON.stringify(cartItems, null, 2));
+                resolve(cartItems.length > 0 ? cartItems[0].total : 0);
+            } catch (error) {
+                console.error('Error fetching cart total:', error);
+                reject(error);
+            }
+        });
     }
+    
+      
 };

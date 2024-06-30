@@ -4,23 +4,67 @@
             <thead>
                 <tr>
                     <th scope="col">Item</th>
-                    <th scope="col">Cart</th>
+                    <th scope="col">Title</th>
+                    <th scope="col">Price</th>
                     <th scope="col">Quantity</th>
                 </tr>
             </thead>
             <tbody>
                 {{#each products}}
-                    <tr>
+                    <tr id="product-row-{{productDetails._id}}">
                     <td><img style="width:50px;height:40px;" src="/product-images/{{productDetails._id}}.jpg" alt=""></td>
                     <td>{{productDetails.name}}</td>
-                    <td>{{quantity}}</td>
+                    <td>Rs.{{productDetails.price}}</td>
                     <td>
+                        <button class="cart-item-count mr-3" onclick="changeQuant('{{userId}}', '{{productDetails._id}}', -1)">-</button>
+                        <span id="quantity-{{productDetails._id}}">{{quantity}}</span>
+                        <button class="cart-item-count ml-3" onclick="changeQuant('{{userId}}', '{{productDetails._id}}', 1)">+</button>
+                        </td>
+                        <td>
                     <a href="" class="btn btn-danger">Remove</a>
                     </td>
                     </tr>
-                    {{/each}}
+                {{/each}}
+
 
             </tbody>
         </table>
+        <hr>
+        <div class="float-right pr-5">
+            <h3 class="float-left mr-5">Total : Rs.40000</h3>
+            <a href="/place-order" class="btn btn-success mt-3 " style="width:100%;"><b>Place Order</b></a>
+        </div>
     </div>
 </section>
+<script>
+    function changeQuant(userId, prodId, count) {
+    $.ajax({
+        url: '/change-product-quantity',
+        data: {
+            userId: userId,
+            prodId: prodId,
+            count: count
+        },
+        method: 'POST',
+        success: function(response) {
+            if (response.status) {
+                // Update the quantity displayed in the UI
+                let quantityElement = $(`#quantity-${prodId}`);
+                let currentQuantity = parseInt(quantityElement.text());
+                if (currentQuantity + count > 0) {
+                    quantityElement.text(currentQuantity + count);
+                } else {
+                    $(`#product-row-${prodId}`).remove(); // Remove the product row if quantity becomes 0
+                }
+            }
+            alert(response.message);
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX error:', status, error);
+            alert('Error changing product quantity: ' + error);
+        }
+    });
+}
+
+
+</script>
