@@ -16,10 +16,11 @@
                     <td>{{productDetails.name}}</td>
                     <td>Rs.{{productDetails.price}}</td>
                     <td>
-                        <button class="cart-item-count mr-3" onclick="changeQuant('{{userId}}', '{{productDetails._id}}', -1)">-</button>
+                        <button class="cart-item-count mr-3" onclick="changeQuant('{{../user.id}}', '{{productDetails._id}}', -1)">-</button>
                         <span id="quantity-{{productDetails._id}}">{{quantity}}</span>
-                        <button class="cart-item-count ml-3" onclick="changeQuant('{{userId}}', '{{productDetails._id}}', 1)">+</button>
-                        </td>
+                        <button class="cart-item-count ml-3" onclick="changeQuant('{{../user.id}}', '{{productDetails._id}}', 1)">+</button>
+                    </td>
+
                         <td>
                     <a href="" class="btn btn-danger">Remove</a>
                     </td>
@@ -31,40 +32,44 @@
         </table>
         <hr>
         <div class="float-right pr-5">
-            <h3 class="float-left mr-5">Total : Rs.40000</h3>
+            <h3 class="float-left mr-5">Total : Rs.<span id="total">{{tot}}</span></h3>
             <a href="/place-order" class="btn btn-success mt-3 " style="width:100%;"><b>Place Order</b></a>
         </div>
     </div>
 </section>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    function changeQuant(userId, prodId, count) {
-    $.ajax({
-        url: '/change-product-quantity',
-        data: {
-            userId: userId,
-            prodId: prodId,
-            count: count
-        },
-        method: 'POST',
-        success: function(response) {
-            if (response.status) {
-                // Update the quantity displayed in the UI
-                let quantityElement = $(`#quantity-${prodId}`);
-                let currentQuantity = parseInt(quantityElement.text());
-                if (currentQuantity + count > 0) {
-                    quantityElement.text(currentQuantity + count);
-                } else {
-                    $(`#product-row-${prodId}`).remove(); // Remove the product row if quantity becomes 0
+        function changeQuant(userId, prodId, count) {
+            $.ajax({
+                url: '/change-product-quantity',
+                method: 'POST',
+                data: {
+                    userId: userId,
+                    prodId: prodId,
+                    count: count
+                },
+                success: function(response) {
+                    if (response.status) {
+                        // Update the quantity display
+                        let quantityElement = $('#quantity-' + prodId);
+                        let newQuantity = parseInt(quantityElement.text()) + count;
+                        if (newQuantity <= 0) {
+                            // Remove the item row if quantity is zero or less
+                            quantityElement.closest('tr').remove();
+                        } else {
+                            quantityElement.text(newQuantity);
+                        }
+
+                        // Update the total display
+                        $('#total').text(response.total);
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error updating product quantity:', error);
+                    alert('Error updating product quantity: ' + error);
                 }
-            }
-            alert(response.message);
-        },
-        error: function(xhr, status, error) {
-            console.error('AJAX error:', status, error);
-            alert('Error changing product quantity: ' + error);
+            });
         }
-    });
-}
-
-
-</script>
+    </script>

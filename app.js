@@ -47,5 +47,16 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+app.get('/place-order', (req, res) => {
+  const userId = req.session.user._id; // Assuming userId is stored in session
+  res.render('place-order', { userId });
+});
+
+// POST route to handle form submission
+app.post('/place-order', (req, res) => {
+  console.log(req.body); // To check the form data in the server console
+  res.json({ status: true, message: 'Order placed successfully' });
+});
+
 
 module.exports = app;

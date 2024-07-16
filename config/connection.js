@@ -1,23 +1,29 @@
-const mongoClient = require('mongodb').MongoClient
-const state ={
-    db:null
-}
+const { MongoClient } = require('mongodb');
 
-module.exports.connect= async function(done){
-    const url='mongodb://localhost:27017'
-    const dbname='shopping';
-    try{
-            const client = await mongoClient.connect(url);
-            state.db=client.db(dbname);
-            done();
+const state = {
+    db: null
+};
 
-    }catch(err){
+module.exports.connect = async function (done) {
+    const url = 'mongodb://localhost:27017';
+    const dbname = 'shopping';
+
+    try {
+        const client = await MongoClient.connect(url, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        });
+
+        state.db = client.db(dbname);
+        console.log('MongoDB connected successfully');
+
+        done();
+    } catch (err) {
+        console.error('Error connecting to MongoDB:', err);
         done(err);
     }
+};
 
-   
-}
-
-module.exports.get=function(){
+module.exports.get = function () {
     return state.db;
-}        
+};

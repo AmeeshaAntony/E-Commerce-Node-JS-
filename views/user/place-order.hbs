@@ -1,7 +1,7 @@
 <body>
     <div class="container" style="max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2>Enter Delivery Details</h2>
-        <form id="deliveryForm">
+        <form id="deliveryForm" action="/place-order" method="POST">
             <div class="form-group">
                 <label for="address">Address</label>
                 <input type="text" class="form-control" id="address" name="address" required>
@@ -13,6 +13,7 @@
             <div class="form-group">
                 <label for="mobile">Mobile</label>
                 <input type="text" class="form-control" id="mobile" name="mobile" required>
+                <input type="hidden" name="userId" value="{{userId}}">
             </div>
             <div class="total-amount" style="font-weight: bold; font-size: 1.5em; margin-top: 20px;">
                 Total Amount: $<span id="totalAmount">{{total}}</span>
@@ -28,3 +29,29 @@
         </form>
     </div>
 </body>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $("#deliveryForm").submit(function(e) {
+            e.preventDefault(); // Prevent default form submission
+
+            // Serialize form data
+            var formData = $(this).serialize();
+
+            // AJAX request to submit form data
+            $.ajax({
+                url: '/place-order',
+                method: 'POST',
+                data: formData,
+                success: function(response) {
+                    alert(response.message); // Show success message
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error placing order:', error);
+                    alert('Failed to place order. Please try again.');
+                }
+            });
+        });
+    });
+</script>
+

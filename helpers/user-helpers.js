@@ -167,9 +167,7 @@ module.exports = {
         count = parseInt(count);
         return new Promise(async (resolve, reject) => {
             try {
-                // Fetch the cart to check if the product exists
                 let userCart = await db.get().collection(collection.CART_COLLECTION).findOne({ user: new ObjectId(userId) });
-                //console.log('User Cart:', JSON.stringify(userCart, null, 2));
     
                 if (userCart && userCart.products) {
                     const productIndex = userCart.products.findIndex(product => product.item && product.item.toString() === prodId);
@@ -178,20 +176,20 @@ module.exports = {
                     if (productIndex !== -1) {
                         const currentQuantity = userCart.products[productIndex].quantity;
                         if (currentQuantity === 1 && count === -1) {
-                            // Remove the product if current quantity is 1 and count is -1
                             await db.get().collection(collection.CART_COLLECTION).updateOne(
                                 { user: new ObjectId(userId) },
                                 { $pull: { products: { item: new ObjectId(prodId) } } }
                             );
                             console.log('Product removed from cart');
-                            resolve({removeProduct:true})
+                            resolve({ removeProduct: true });
                         } else {
-                            // Otherwise, update the product quantity
                             await db.get().collection(collection.CART_COLLECTION).updateOne(
                                 { 'user': new ObjectId(userId), 'products.item': new ObjectId(prodId) },
                                 { $inc: { 'products.$.quantity': count } }
                             );
                             console.log('Product quantity updated');
+                            const newQuantity = currentQuantity + count;
+                            resolve({ newQuantity: newQuantity });
                         }
                     } else {
                         await db.get().collection(collection.CART_COLLECTION).updateOne(
@@ -199,23 +197,28 @@ module.exports = {
                             { $push: { products: { item: new ObjectId(prodId), quantity: count } } }
                         );
                         console.log('Product added to cart');
+                        const newTotal = await userHelpers.getTotal(userId);
+                        resolve({ newTotal: newTotal });
+                        resolve();
                     }
                 } else {
-                    // If no cart exists for the user, create a new cart with the product
                     let cartObj = {
                         user: new ObjectId(userId),
                         products: [{ item: new ObjectId(prodId), quantity: count }]
                     };
                     await db.get().collection(collection.CART_COLLECTION).insertOne(cartObj);
                     console.log('New cart created and product added');
+                    const newTotal = await userHelpers.getTotal(userId);
+                    resolve({ newTotal: newTotal });
+                    resolve();
                 }
-                resolve();
             } catch (error) {
                 console.error('Error changing product quantity:', error);
                 reject(error);
             }
         });
-    },
+    }
+    ,
     getTotal: (userId) => {
         return new Promise(async (resolve, reject) => {
             try {
@@ -239,14 +242,20 @@ module.exports = {
                         $unwind: '$productDetails' // Deconstruct the resulting product details array
                     },
                     {
-                        $addFields: {
-                            quantity: { $toInt: '$products.quantity' } // Convert quantity to integer if necessary
+                        $project: {
+                            _id: 0,
+                            quantity: '$products.quantity',
+                            price: { $toDouble: '$productDetails.price' }
                         }
                     },
                     {
-                        $group: { // Group by user and calculate total
+                        $group: {
                             _id: null,
-                            total: { $sum: { $multiply: ['$quantity', {$toInt:'$productDetails.price'}] } }
+                            total: {
+                                $sum: {
+                                    $multiply: ['$quantity', '$price']
+                                }
+                            }
                         }
                     }
                 ];
@@ -260,7 +269,45 @@ module.exports = {
                 reject(error);
             }
         });
-    }
+    },
+    // user-helpers.js
+
+placeorder : (order, products, total) => {
+    return new Promise((resolve, reject) => {
+        try {
+            // Perform order placement logic here
+            console.log('Order:', order);
+            console.log('Products:', products);
+            console.log('Total:', total);
+
+            // Simulate order placement success
+            const orderConfirmation = {
+                orderId: '12345', // Replace with actual order ID or relevant data
+                message: 'Order placed successfully',
+                status: true
+            };
+
+            resolve(orderConfirmation); // Resolve with order confirmation data
+        } catch (error) {
+            console.error('Error placing order:', error);
+            reject(error); // Reject with error if there's any issue
+        }
+    });
+},
+
+    getCartProductList: (userId) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let cart = await db.get().collection(collection.CART_COLLECTION).findOne({ user: new ObjectId(userId) });
+                console.log(cart);
+                resolve(cart.products); // Assuming products are directly under `products` array in cart
+            } catch (error) {
+                console.error('Error fetching cart products:', error);
+                reject(error);
+            }
+        });
+    },
+    
     
       
 };

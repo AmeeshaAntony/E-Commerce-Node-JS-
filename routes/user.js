@@ -93,9 +93,11 @@ router.get('/logout',(req,res)=>{
 })
 
 router.get('/cart',verifylogin,async(req,res)=>{
+    let tot=await userHelpers.getTotal(req.session.user._id)
     let products=await userHelpers.getcartproducts(req.session.user._id)
     console.log(products)
-    res.render('user/cart',{products,user:req.session.user})//user inorder to display username in that page
+    res.render('user/cart',{products,user:req.session.user,tot})//user inorder to display username in that page
+
 })
 router.get('/add-to-cart/:id', async (req, res) => {
     try {
@@ -112,14 +114,48 @@ router.post('/change-product-quantity', async (req, res) => {
     try {
         const { userId, prodId, count } = req.body;
         await userHelpers.changeproQuant({ userId, prodId, count });
-        res.json({ status: true, message: 'Product quantity updated successfully' });
+        const total = await userHelpers.getTotal(userId);
+        res.json({ status: true, total });
     } catch (error) {
         console.error('Error changing product quantity:', error);
         res.status(500).json({ status: false, message: 'Error changing product quantity' });
     }
 });
+
+
 router.get('/place-order',verifylogin,async(req,res)=>{
     let total=await userHelpers.getTotal(req.session.user._id)
-    res.render('user/place-order',{total})//avdenn varunna value aahn total
+    res.render('user/place-order',{total,user:req.session.user})//avdenn varunna value aahn total
 })
+
+router.post('/place-order', async (req, res) => {
+    const userId = req.session.user._id; // Fetch userId from session
+
+    try {
+        // Fetch products from cart based on userId
+        let products = await userHelpers.getCartProductList(userId);
+
+        // Calculate total based on the user
+        let total = await userHelpers.getTotal(userId);
+
+        // Place order using the fetched data
+        userHelpers.placeorder(req.body, products, total)
+            .then((orderConfirmation) => {
+                console.log('Order confirmation:', orderConfirmation);
+                res.json(orderConfirmation); // Respond with order confirmation data
+            })
+            .catch((error) => {
+                console.error('Error placing order:', error);
+                res.status(500).json({ status: false, message: 'Failed to place order' });
+            });
+
+    } catch (error) {
+        console.error('Error fetching cart products or total:', error);
+        res.status(500).json({ status: false, message: 'Error fetching cart products or total' });
+    }
+});
+
+
+
+
 module.exports = router;
