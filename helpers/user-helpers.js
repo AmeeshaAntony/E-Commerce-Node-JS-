@@ -272,28 +272,42 @@ module.exports = {
     },
     // user-helpers.js
 
-placeorder : (order, products, total) => {
-    return new Promise((resolve, reject) => {
-        try {
-            // Perform order placement logic here
-            console.log('Order:', order);
-            console.log('Products:', products);
-            console.log('Total:', total);
-
-            // Simulate order placement success
-            const orderConfirmation = {
-                orderId: '12345', // Replace with actual order ID or relevant data
-                message: 'Order placed successfully',
-                status: true
-            };
-
-            resolve(orderConfirmation); // Resolve with order confirmation data
-        } catch (error) {
-            console.error('Error placing order:', error);
-            reject(error); // Reject with error if there's any issue
-        }
-    });
-},
+    placeorder: (order, products, total) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Ensure order.userId is defined and valid
+                if (!order.userId || !ObjectId.isValid(order.userId)) {
+                    throw new Error('Invalid user ID');
+                }
+    
+                let status = order['payment-method'] === 'cod' ? 'placed' : 'pending';
+                let orderObj = {
+                    deliveryDet: {
+                        mobile: order.mobile,
+                        address: order.address,
+                        pincode: order.pincode
+                    },
+                    userId: new ObjectId(order.userId),
+                    paymentMethod: order['payment-method'],
+                    products: products,
+                    status: status,
+                    total: total,
+                    date: new Date()
+                };
+    
+                // Log the order object before insertion
+                console.log('Order Object:', JSON.stringify(orderObj, null, 2));
+    
+                let response = await db.get().collection(collection.ORDER_COLLECTION).insertOne(orderObj);
+                db.get().collection(collection.CART_COLLECTION).removeOne({user:new ObjectId(userId)})
+                resolve({ orderId: response.insertedId });
+            } catch (error) {
+                console.error('Error placing order:', error);
+                reject(error);
+            }
+        });
+    },
+    
 
     getCartProductList: (userId) => {
         return new Promise(async (resolve, reject) => {

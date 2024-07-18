@@ -44,7 +44,10 @@
                 method: 'POST',
                 data: formData,
                 success: function(response) {
-                    alert(response.message); // Show success message
+                    alert('successfully placed'); // Show success message
+                    if(response.status){
+                        location.href=''
+                    }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error placing order:', error);

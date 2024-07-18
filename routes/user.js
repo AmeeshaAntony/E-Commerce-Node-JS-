@@ -129,17 +129,25 @@ router.get('/place-order',verifylogin,async(req,res)=>{
 })
 
 router.post('/place-order', async (req, res) => {
-    const userId = req.session.user._id; // Fetch userId from session
-
     try {
-        // Fetch products from cart based on userId
-        let products = await userHelpers.getCartProductList(userId);
+        // Ensure user session is set
+        if (!req.session.user || !req.session.user._id) {
+            return res.status(401).json({ status: false, message: 'User not authenticated' });
+        }
 
-        // Calculate total based on the user
+        const userId = req.session.user._id; // Fetch userId from session
+        console.log('User ID:', userId); // Log the userId for verification
+
+        let products = await userHelpers.getCartProductList(userId);
         let total = await userHelpers.getTotal(userId);
 
-        // Place order using the fetched data
-        userHelpers.placeorder(req.body, products, total)
+        let orderData = {
+            ...req.body,
+            userId: userId, // Include userId in order data
+            'payment-method': req.body.paymentMethod // Ensure correct payment method field
+        };
+
+        userHelpers.placeorder(orderData, products, total)
             .then((orderConfirmation) => {
                 console.log('Order confirmation:', orderConfirmation);
                 res.json(orderConfirmation); // Respond with order confirmation data
@@ -154,6 +162,9 @@ router.post('/place-order', async (req, res) => {
         res.status(500).json({ status: false, message: 'Error fetching cart products or total' });
     }
 });
+
+
+
 
 
 
